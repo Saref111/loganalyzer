@@ -15,4 +15,10 @@ impl Display for AppError {
 
 impl Error for AppError {}
 
+impl From<std::io::Error> for AppError {
+    fn from(value: std::io::Error) -> Self {
+        AppError::IO(value)
+    }
+}
+
 pub type Result<T> = std::result::Result<T, AppError>;

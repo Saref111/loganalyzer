@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash)]
 pub enum Level {
     Trace,
     Debug,

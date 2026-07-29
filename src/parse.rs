@@ -4,6 +4,7 @@ use regex::Regex;
 
 use crate::levels::Level;
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LogLine<'a> {
     timestamp: &'a str,
     level: Level,

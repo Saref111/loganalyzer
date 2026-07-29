@@ -5,7 +5,7 @@ mod stats;
 
 use std::{io::Read, process::exit};
 
-use crate::{error::Result, parse::LogParser};
+use crate::{error::Result, parse::LogParser, stats::get_stats_values};
 
 fn main() {
     if let Err(err) = run() {
@@ -17,12 +17,9 @@ fn main() {
 fn run() -> Result<()> {
     let mut buf = String::new();
     std::io::stdin().read_to_string(&mut buf)?;
-    let mut log_lines = vec![];
     let parser = LogParser::new();
 
-    for line in buf.lines() {
-        log_lines.push(parser.parse(line));
-    }
+    let stats_values = get_stats_values(buf.lines(), &parser, None);
 
     Ok(())
 }

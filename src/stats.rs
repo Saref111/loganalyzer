@@ -14,7 +14,7 @@ pub enum Value<'a> {
     Null,
 }
 
-type StatValue<'a> = (StatName<'a>, Vec<(Key<'a>, Value<'a>)>);
+pub type StatValue<'a> = (StatName<'a>, Vec<(Key<'a>, Value<'a>)>);
 
 trait Stat<'a> {
     fn name(&self) -> &'static str;

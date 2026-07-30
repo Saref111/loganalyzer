@@ -1,6 +1,7 @@
 mod error;
 mod levels;
 mod parse;
+mod report;
 mod stats;
 
 use std::{io::Read, process::exit};

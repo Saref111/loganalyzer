@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
+    consts::{
+        FREQUENCY_STATISTICS_NAME, LEVEL_STATISTICS_NAME, LINE_STATISTICS_NAME,
+        TIMESTAMP_STATISTICS_NAME,
+    },
     levels::Level,
     parse::{LogLine, LogParser},
 };
@@ -14,7 +18,12 @@ pub enum Value<'a> {
     Null,
 }
 
-pub type StatValue<'a> = (StatName<'a>, Vec<(Key<'a>, Value<'a>)>);
+pub enum Shape {
+    Pairs,
+    Records,
+}
+
+pub type StatValue<'a> = (StatName<'a>, Vec<(Key<'a>, Value<'a>)>, Shape);
 
 trait Stat<'a> {
     fn name(&self) -> &'static str;
@@ -29,7 +38,7 @@ struct LevelStat {
 
 impl<'a> Stat<'a> for LevelStat {
     fn name(&self) -> &'static str {
-        "Level statistics"
+        LEVEL_STATISTICS_NAME
     }
 
     fn update(&mut self, log_line: &LogLine) {
@@ -40,12 +49,15 @@ impl<'a> Stat<'a> for LevelStat {
     }
 
     fn value(&self) -> StatValue<'a> {
+        let mut vec: Vec<(&Level, &u64)> = self.map.iter().collect();
+        vec.sort_by(|a, b| a.0.cmp(b.0));
+
         (
             self.name(),
-            self.map
-                .iter()
+            vec.into_iter()
                 .map(|(l, a)| (l.to_str(), Value::Count(*a)))
                 .collect(),
+            Shape::Pairs,
         )
     }
 }
@@ -79,7 +91,7 @@ impl Default for FrequencyStat<'_> {
 
 impl<'a> Stat<'a> for FrequencyStat<'a> {
     fn name(&self) -> &'static str {
-        "Frequency statistics"
+        FREQUENCY_STATISTICS_NAME
     }
 
     fn update(&mut self, log_line: &LogLine<'a>) {
@@ -103,7 +115,7 @@ impl<'a> Stat<'a> for FrequencyStat<'a> {
             .collect::<Vec<_>>();
         vec.truncate(self.capacity);
 
-        (self.name(), vec)
+        (self.name(), vec, Shape::Records)
     }
 }
 
@@ -115,7 +127,7 @@ struct TimeStat<'a> {
 
 impl<'a> Stat<'a> for TimeStat<'a> {
     fn name(&self) -> &'static str {
-        "The first and the last timestamps"
+        TIMESTAMP_STATISTICS_NAME
     }
 
     fn update(&mut self, log_line: &LogLine<'a>) {
@@ -130,6 +142,7 @@ impl<'a> Stat<'a> for TimeStat<'a> {
         (
             self.name(),
             vec![("First timestamp", first), ("Last timestamp", last)],
+            Shape::Pairs,
         )
     }
 }
@@ -161,12 +174,13 @@ pub fn get_stats_values<'a>(
     }
 
     let mut stats_values: Vec<StatValue> = vec![(
-        "Lines statistics",
+        LINE_STATISTICS_NAME,
         vec![
             ("Parsed lines", Value::Count(parsed)),
             ("Broken lines", Value::Count(broken)),
             ("Total lines", Value::Count(total)),
         ],
+        Shape::Pairs,
     )];
     stats_values.extend(stats.iter().map(|s| s.value()));
 

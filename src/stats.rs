@@ -69,22 +69,10 @@ struct FrequencyStat<'a> {
 }
 
 impl FrequencyStat<'_> {
-    fn new(capacity: Option<usize>) -> Self {
-        match capacity {
-            Some(capacity) => Self {
-                map: HashMap::new(),
-                capacity,
-            },
-            None => FrequencyStat::default(),
-        }
-    }
-}
-
-impl Default for FrequencyStat<'_> {
-    fn default() -> Self {
+    fn new(capacity: usize) -> Self {
         Self {
             map: HashMap::new(),
-            capacity: 5,
+            capacity,
         }
     }
 }
@@ -150,11 +138,13 @@ impl<'a> Stat<'a> for TimeStat<'a> {
 pub fn get_stats_values<'a>(
     lines: impl Iterator<Item = &'a str>,
     parser: &LogParser,
-    top_n: Option<usize>,
+    top_n: usize,
+    filter_level: Option<Level>,
 ) -> Vec<StatValue<'a>> {
     let mut total: u64 = 0;
     let mut parsed: u64 = 0;
     let mut broken: u64 = 0;
+    let mut filtered: u64 = 0;
 
     let mut stats: Vec<Box<dyn Stat>> = vec![
         Box::new(LevelStat::default()),
@@ -163,25 +153,34 @@ pub fn get_stats_values<'a>(
     ];
 
     for line in lines {
+        total += 1;
         match parser.parse(line) {
             Some(log_line) => {
+                if filter_level.is_some_and(|l| l > log_line.level()) {
+                    filtered += 1;
+                    continue;
+                }
+
                 stats.iter_mut().for_each(|s| s.update(&log_line));
                 parsed += 1;
             }
             None => broken += 1,
         }
-        total += 1;
     }
 
-    let mut stats_values: Vec<StatValue> = vec![(
-        LINE_STATISTICS_NAME,
-        vec![
-            ("Parsed lines", Value::Count(parsed)),
-            ("Broken lines", Value::Count(broken)),
-            ("Total lines", Value::Count(total)),
-        ],
-        Shape::Pairs,
-    )];
+    let mut lines_entries = vec![
+        ("Parsed lines", Value::Count(parsed)),
+        ("Broken lines", Value::Count(broken)),
+        ("Total lines", Value::Count(total)),
+        ("Filtered out lines", Value::Count(filtered)),
+    ];
+    if let Some(min) = filter_level {
+        lines_entries.push(("Active filter", Value::Text(min.to_str())));
+    }
+
+    let mut stats_values: Vec<StatValue> =
+        vec![(LINE_STATISTICS_NAME, lines_entries, Shape::Pairs)];
+
     stats_values.extend(stats.iter().map(|s| s.value()));
 
     stats_values

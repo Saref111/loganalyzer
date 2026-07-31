@@ -1,9 +1,20 @@
 use crate::stats::{Shape, StatValue, Value};
-use std::fmt::Write;
+use clap::ValueEnum;
+use std::fmt::{self, Write};
 
-pub enum ReportType {
+#[derive(Clone, ValueEnum)]
+pub enum Format {
     Text,
     Json,
+}
+
+impl fmt::Display for Format {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_possible_value()
+            .expect("no skipped variants")
+            .get_name()
+            .fmt(f)
+    }
 }
 
 pub trait Report {
@@ -94,10 +105,10 @@ fn message_array(entries: &[(&str, Value)]) -> String {
     format!("[{}]", parts.join(","))
 }
 
-pub fn get_report(stats: &[StatValue], report_type: ReportType) -> String {
+pub fn get_report(stats: &[StatValue], report_type: Format) -> String {
     let report: Box<dyn Report> = match report_type {
-        ReportType::Text => Box::new(TextReport),
-        ReportType::Json => Box::new(JsonReport),
+        Format::Text => Box::new(TextReport),
+        Format::Json => Box::new(JsonReport),
     };
 
     report.render(stats)

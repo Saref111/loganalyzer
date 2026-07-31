@@ -1,10 +1,23 @@
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash)]
+use std::fmt;
+
+use clap::ValueEnum;
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, ValueEnum)]
 pub enum Level {
     Trace,
     Debug,
     Info,
     Warn,
     Error,
+}
+
+impl fmt::Display for Level {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_possible_value()
+            .expect("no skipped variants")
+            .get_name()
+            .fmt(f)
+    }
 }
 
 impl Level {

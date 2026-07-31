@@ -1,3 +1,4 @@
+mod cli;
 mod consts;
 mod error;
 mod levels;
@@ -5,33 +6,37 @@ mod parse;
 mod report;
 mod stats;
 
-use std::{io::Read, process::exit};
+use std::{fs, io::Read, process::exit};
+
+use clap::Parser;
 
 use crate::{
-    error::Result,
-    parse::LogParser,
-    report::{ReportType, get_report},
-    stats::get_stats_values,
+    cli::CliArgs, error::Result, parse::LogParser, report::get_report, stats::get_stats_values,
 };
 
 fn main() {
-    if let Err(err) = run() {
+    let args = cli::CliArgs::parse();
+
+    if let Err(err) = run(args) {
         eprintln!("{err}");
         exit(1);
     }
 }
 
-fn run() -> Result<()> {
+fn run(args: CliArgs) -> Result<()> {
     let mut buf = String::new();
-    std::io::stdin().read_to_string(&mut buf)?;
+    if let Some(path) = args.path {
+        buf = fs::read_to_string(path)?;
+    } else {
+        std::io::stdin().read_to_string(&mut buf)?;
+    }
+
     let parser = LogParser::new();
 
-    let stats_values = get_stats_values(buf.lines(), &parser, None);
-    let report_json = get_report(&stats_values, ReportType::Json);
-    let report_text = get_report(&stats_values, ReportType::Text);
+    let stats_values = get_stats_values(buf.lines(), &parser, args.top, args.level);
+    let report = get_report(&stats_values, args.format);
 
-    println!("{report_json}");
-    println!("{report_text}");
+    println!("{report}");
 
     Ok(())
 }
